@@ -35,40 +35,57 @@ mkdir -p image/{casper,isolinux,install}
 cp chroot/boot/vmlinuz-4.15.*-generic image/casper/vmlinuz
 cp chroot/boot/initrd.img-4.15.*-generic image/casper/initrd.lz
 
-#cp /usr/lib/ISOLINUX/isolinux.bin image/isolinux/
-#cp /boot/memtest86+.bin image/install/memtest
+mkdir -p image/boot/grub
 
-mkdir -p image/isolinux
-cp -Rv /usr/lib/syslinux/modules/bios/*.c32 image/isolinux/
-cat > image/isolinux/isolinux.cfg << EOF
-DEFAULT live
-LABEL live
-  menu label ^Start or install Ubuntu Remix
-  kernel /casper/vmlinuz
-  append  file=/cdrom/preseed/ubuntu.seed boot=casper initrd=/casper/initrd.lz quiet splash --
-LABEL check
-  menu label ^Check CD for defects
-  kernel /casper/vmlinuz
-  append  boot=casper integrity-check initrd=/casper/initrd.lz quiet splash --
-LABEL memtest
-  menu label ^Memory test
-  kernel /install/memtest
-  append -
-LABEL hd
-  menu label ^Boot from first hard disk
-  localboot 0x80
-  append -
-DISPLAY isolinux.txt
-TIMEOUT 300
-PROMPT 1 
+cat > image/boot/grub/grub.cfg << EOF
+insmod efi_gop
+insmod efi_uga
+font=unicode
+insmod part_msdos
+insmod ext2
+set root=(cd0,gpt3)
 
-#prompt flag_val
-# 
-# If flag_val is 0, display the "boot:" prompt 
-# only if the Shift or Alt key is pressed,
-# or Caps Lock or Scroll lock is set (this is the default).
-# If  flag_val is 1, always display the "boot:" prompt.
-#  http://linux.die.net/man/1/syslinux   syslinux manpage 
+if loadfont $font ; then
+  set gfxmode=auto
+  load_video
+  insmod gfxterm
+  set locale_dir=$prefix/locale
+  set lang=en_US
+  insmod gettext
+  set gfxmode=auto;
+  set gfxpayload=keep;
+fi
+terminal_output gfxterm
+
+fi
+### END /etc/grub.d/00_header ###
+
+### BEGIN /etc/grub.d/05_debian_theme ###
+set menu_color_normal=white/black
+set menu_color_highlight=black/light-gray
+#set_background_image "images/tile.png";
+
+set menu_color_normal=white/black
+set menu_color_highlight=black/light-gray
+if background_color 0,0,0; then
+  clear
+fi
+### END /etc/grub.d/05_debian_theme ###
+
+
+menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os {
+	insmod gzio
+	if [ x\$grub_platform = xxen ]; then insmod xzio; insmod lzopio; fi
+    linux	/casper/vmlinuz file=/cdrom/preseed/ubuntu.seed boot=casper quiet splash
+	initrd	/casper/initrd.lz
+}
+
+menuentry 'Check CD for defects' --class ubuntu --class gnu-linux --class gnu --class os {
+	insmod gzio
+	if [ x\$grub_platform = xxen ]; then insmod xzio; insmod lzopio; fi
+    linux	/casper/vmlinuz boot=casper integrity-check quiet splash
+	initrd	/casper/initrd.lz
+}
 EOF
 
 sudo chroot chroot dpkg-query -W --showformat='${Package} ${Version}\n' | sudo tee image/casper/filesystem.manifest
