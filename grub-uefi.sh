@@ -27,9 +27,34 @@ function InstallLiveCDBasicPackages(){
 	chroot chroot apt-get install --yes dbus
 	chroot chroot dbus-uuidgen > /var/lib/dbus/machine-id
 
-	chroot chroot apt-get install --yes ubuntu-standard casper lupin-casper
+	chroot chroot apt-get install -y ubuntu-standard casper lupin-casper
 	chroot chroot apt-get install --yes discover laptop-detect os-prober
 	chroot chroot apt-get install --yes linux-signed-generic 
+}
+
+function InstallLiveCDPackages(){
+	#remove Grub 2
+	chroot chroot apt purge -y grub-common
+	#install Grub 2 for UEFI Systems
+	chroot chroot apt install -y grub-efi-amd64-signed 
+	#install network support
+	chroot chroot apt install -y dhcpcd5 net-tools network-manager
+	#install build Env
+	chroot chroot apt install -y build-essential automake autoconf gawk m4 apt-build bison dialog dpkg-dev
+	#install debootstrap
+	chroot chroot apt install -y debootstrap
+	#install livecd
+	chroot chroot apt install -y squashfs-tools mtools xorriso genisoimage
+	#install Desktop
+	chroot chroot apt install -y gparted ubuntu-desktop
+	#install VM Drivers
+	chroot chroot apt install -y open-vm-tools virtualbox-dkms
+	#install openssh
+	chroot chroot apt install -y openssh-server openssh-client
+	#install vcs
+	chroot chroot apt install -y git subversion mercurial
+	#Do Some Manual Configurations
+	chroot chroot
 }
 
 function RemoveTemporaryFiles(){
@@ -62,9 +87,8 @@ function CreateLiveCDStructures(){
 	insmod ext2
 	set root=(cd0,gpt3)
 
-	if loadfont $font ; then
+	if loadfont \$font ; then
 	  set gfxmode=auto
-	  load_video
 	  insmod gfxterm
 	  set locale_dir=$prefix/locale
 	  set lang=en_US
@@ -90,14 +114,14 @@ function CreateLiveCDStructures(){
 	### END /etc/grub.d/05_debian_theme ###
 
 
-	menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os {
+	menuentry 'Try KSLinux Live CD' --class ubuntu --class gnu-linux --class gnu --class os {
 		insmod gzio
 		if [ x\$grub_platform = xxen ]; then insmod xzio; insmod lzopio; fi
 		linux	/casper/vmlinuz file=/cdrom/preseed/ubuntu.seed boot=casper quiet splash
 		initrd	/casper/initrd.lz
 	}
 
-	menuentry 'Check CD for defects' --class ubuntu --class gnu-linux --class gnu --class os {
+	menuentry 'Check CD' --class ubuntu --class gnu-linux --class gnu --class os {
 		insmod gzio
 		if [ x\$grub_platform = xxen ]; then insmod xzio; insmod lzopio; fi
 		linux	/casper/vmlinuz boot=casper integrity-check quiet splash
@@ -117,11 +141,11 @@ EOF
 	printf $(sudo du -sx --block-size=1 chroot | cut -f1) > image/casper/filesystem.size
 
 	cat > image/README.diskdefines <<EOF
-	#define DISKNAME  Ubuntu Remix
+	#define DISKNAME  LFS 8.2
 	#define TYPE  binary
 	#define TYPEbinary  1
-	#define ARCH  i386
-	#define ARCHi386  1
+	#define ARCH  amd64
+	#define ARCHamd64  1
 	#define DISKNUM  1
 	#define DISKNUM1  1
 	#define TOTALNUM  0
@@ -134,8 +158,8 @@ EOF
 	cd image/.disk
 	touch base_installable
 	echo "full_cd/single" > cd_type
-	echo "Ubuntu Remix 18.04" > info  # Update version number to match your OS version
-	echo "http://your-release-notes-url.com" > release_notes_url
+	echo "Build-Env LFS 8.2" > info  # Update version number to match your OS version
+	echo "https://www.ksyuki.com/" > release_notes_url
 	cd ../..
 
 	(cd image && find . -type f -print0 | xargs -0 md5sum | grep -v "\./md5sum.txt" > md5sum.txt)
@@ -155,6 +179,7 @@ function Main(){
 	BindMountPoints
 	SetRootPassword
 	InstallLiveCDBasicPackages
+	InstallLiveCDPackages
 	RemoveTemporaryFiles
 	UnbindMountPoints
 	CreateLiveCDStructures
