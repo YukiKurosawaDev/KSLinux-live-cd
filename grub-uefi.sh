@@ -2,7 +2,7 @@
 
 function InitBasicSystem(){
 	mkdir chroot
-	debootstrap bionic chroot http://mirrors.aliyun.com/ubuntu
+	debootstrap jammy chroot http://mirrors.aliyun.com/ubuntu
 }
 
 function CopyBasicConfigFiles(){
@@ -29,7 +29,7 @@ function InstallLiveCDBasicPackages(){
 
 	chroot chroot apt-get install -y ubuntu-standard casper lupin-casper
 	chroot chroot apt-get install --yes discover laptop-detect os-prober
-	chroot chroot apt-get install --yes linux-signed-generic 
+	chroot chroot apt-get install --yes linux-image-generic 
 }
 
 function InstallLiveCDPackages(){
@@ -74,8 +74,8 @@ function UnbindMountPoints(){
 function CreateLiveCDStructures(){
 	mkdir -p image/{casper,install}
 
-	cp chroot/boot/vmlinuz-4.15.*-generic image/casper/vmlinuz
-	cp chroot/boot/initrd.img-4.15.*-generic image/casper/initrd.lz
+	cp chroot/boot/vmlinuz-5.15.*-generic image/casper/vmlinuz
+	cp chroot/boot/initrd.img-5.15.*-generic image/casper/initrd.lz
 
 	mkdir -p image/boot/grub
 
@@ -158,7 +158,7 @@ EOF
 	cd image/.disk
 	touch base_installable
 	echo "full_cd/single" > cd_type
-	echo "Build-Env LFS 8.2" > info  # Update version number to match your OS version
+	echo "KSLinux Build-Env 22.04.1" > info  # Update version number to match your OS version
 	echo "https://www.ksyuki.com/" > release_notes_url
 	cd ../..
 
