@@ -1,14 +1,26 @@
 #!/bin/bash
 
+VERSION=mantic
+
 function InitBasicSystem(){
 	mkdir chroot
-	debootstrap jammy chroot http://mirrors.aliyun.com/ubuntu
+	debootstrap mantic chroot http://mirrors.aliyun.com/ubuntu
 }
 
 function CopyBasicConfigFiles(){
 	cp /etc/hosts chroot/etc/hosts
 	cp /etc/resolv.conf chroot/etc/resolv.conf
-	cp /etc/apt/sources.list chroot/etc/apt/sources.list
+	cat > chroot/etc/apt/sources.list << EOF
+# UPDATE APT SOURCES
+deb https://mirrors.aliyun.com/ubuntu/ ${VERSION} main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ ${VERSION} main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ ${VERSION}-updates main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ ${VERSION}-updates main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ ${VERSION}-security main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ ${VERSION}-security main restricted universe multiverse
+# UPDATE APT SOURCES DONE
+EOF
+
 }
 
 function BindMountPoints(){
@@ -34,7 +46,7 @@ function InstallLiveCDBasicPackages(){
 
 function InstallLiveCDPackages(){
 	#remove Grub 2
-	chroot chroot apt purge -y grub-common
+	chroot chroot apt purge -y grub-pc grub-pc-bin
 	#install Grub 2 for UEFI Systems
 	chroot chroot apt install -y grub-efi-amd64-signed 
 	#install network support
@@ -53,6 +65,8 @@ function InstallLiveCDPackages(){
 	chroot chroot apt install -y openssh-server openssh-client
 	#install vcs
 	chroot chroot apt install -y git subversion mercurial
+	install apt-mirror
+	chroot chroot apt install -y apt-mirror
 	#Do Some Manual Configurations
 	chroot chroot
 }
@@ -74,8 +88,8 @@ function UnbindMountPoints(){
 function CreateLiveCDStructures(){
 	mkdir -p image/{casper,install}
 
-	cp chroot/boot/vmlinuz-5.15.*-generic image/casper/vmlinuz
-	cp chroot/boot/initrd.img-5.15.*-generic image/casper/initrd.lz
+	cp chroot/boot/vmlinuz-6.2.*-generic image/casper/vmlinuz
+	cp chroot/boot/initrd.img-6.2.*-generic image/casper/initrd.lz
 
 	mkdir -p image/boot/grub
 
@@ -141,7 +155,7 @@ EOF
 	printf $(sudo du -sx --block-size=1 chroot | cut -f1) > image/casper/filesystem.size
 
 	cat > image/README.diskdefines <<EOF
-	#define DISKNAME  LFS 8.2
+	#define DISKNAME  KSLinux 23.10
 	#define TYPE  binary
 	#define TYPEbinary  1
 	#define ARCH  amd64
@@ -158,7 +172,7 @@ EOF
 	cd image/.disk
 	touch base_installable
 	echo "full_cd/single" > cd_type
-	echo "KSLinux Build-Env 22.04.1" > info  # Update version number to match your OS version
+	echo "KSLinux Build-Env 23.10" > info  # Update version number to match your OS version
 	echo "https://www.ksyuki.com/" > release_notes_url
 	cd ../..
 
