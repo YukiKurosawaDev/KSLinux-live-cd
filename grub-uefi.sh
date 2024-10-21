@@ -1,10 +1,10 @@
 #!/bin/bash
 
-VERSION=mantic
+VERSION=noble
 
 function InitBasicSystem(){
 	mkdir chroot
-	debootstrap mantic chroot http://mirrors.aliyun.com/ubuntu
+	debootstrap ${VERSION} chroot http://mirrors.aliyun.com/ubuntu
 }
 
 function CopyBasicConfigFiles(){
@@ -65,7 +65,7 @@ function InstallLiveCDPackages(){
 	chroot chroot apt install -y openssh-server openssh-client
 	#install vcs
 	chroot chroot apt install -y git subversion mercurial
-	install apt-mirror
+	#install apt-mirror
 	chroot chroot apt install -y apt-mirror
 	#Do Some Manual Configurations
 	chroot chroot
@@ -88,8 +88,8 @@ function UnbindMountPoints(){
 function CreateLiveCDStructures(){
 	mkdir -p image/{casper,install}
 
-	cp chroot/boot/vmlinuz-6.2.*-generic image/casper/vmlinuz
-	cp chroot/boot/initrd.img-6.2.*-generic image/casper/initrd.lz
+	cp chroot/boot/vmlinuz-6.8.*-generic image/casper/vmlinuz
+	cp chroot/boot/initrd.img-6.8.*-generic image/casper/initrd.lz
 
 	mkdir -p image/boot/grub
 
@@ -155,7 +155,7 @@ EOF
 	printf $(sudo du -sx --block-size=1 chroot | cut -f1) > image/casper/filesystem.size
 
 	cat > image/README.diskdefines <<EOF
-	#define DISKNAME  KSLinux 23.10
+	#define DISKNAME  KSLinux 24.04
 	#define TYPE  binary
 	#define TYPEbinary  1
 	#define ARCH  amd64
@@ -172,7 +172,7 @@ EOF
 	cd image/.disk
 	touch base_installable
 	echo "full_cd/single" > cd_type
-	echo "KSLinux Build-Env 23.10" > info  # Update version number to match your OS version
+	echo "KSLinux Build-Env 24.04" > info  # Update version number to match your OS version
 	echo "https://www.ksyuki.com/" > release_notes_url
 	cd ../..
 
@@ -183,7 +183,7 @@ EOF
 function CreateLiveCDISO(){
 	cd image
 	#sudo mkisofs -r -V "$IMAGE_NAME" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ../ubuntu-remix.iso .
-	grub-mkrescue -o ../live.iso .
+	grub-mkrescue -o ../iso/live.iso .
 	cd ..
 }
 

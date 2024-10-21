@@ -1,7 +1,7 @@
 #! /bin/bash
 mkdir -p /opt/ksl
 
-VERSION=mantic
+VERSION=noble
 
 cat > /etc/apt/sources.list << EOF
 # UPDATE APT SOURCES
@@ -15,4 +15,4 @@ deb-src http://mirrors.aliyun.com/ubuntu/ ${VERSION}-security main restricted un
 EOF
 
 apt update
-apt install -y debootstrap xorriso grub-common ca-certificates sudo squashfs-tools mtools genisoimage
+apt install -y debootstrap xorriso grub-common ca-certificates sudo squashfs-tools mtools genisoimage grub-efi-amd64-signed 
