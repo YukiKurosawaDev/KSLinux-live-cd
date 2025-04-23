@@ -2,8 +2,30 @@
 
 VERSION=noble
 
-function InitBasicSystem(){
+function CreateFolders(){
 	mkdir chroot
+	mkdir image
+	mkdir iso
+	mkdir -p chroot{/usr/share/man,/usr/share/doc,/usr/share/info,/var/lib/apt/lists,/var/cache/apt}
+}
+
+function MountTmpFolders(){
+	mount -t tmpfs tmpfs chroot/usr/share/man
+	mount -t tmpfs tmpfs chroot/usr/share/doc
+	mount -t tmpfs tmpfs chroot/usr/share/info
+	mount -t tmpfs tmpfs chroot/var/lib/apt/lists
+	mount -t tmpfs tmpfs chroot/var/cache/apt
+}
+
+function UnmountTmpFolders(){
+	umount chroot/usr/share/man
+	umount chroot/usr/share/doc
+	umount chroot/usr/share/info
+	umount chroot/var/lib/apt/lists
+	umount chroot/var/cache/apt
+}
+
+function InitBasicSystem(){
 	debootstrap ${VERSION} chroot http://mirrors.aliyun.com/ubuntu
 }
 
@@ -99,7 +121,7 @@ function CreateLiveCDStructures(){
 	font=unicode
 	insmod part_msdos
 	insmod ext2
-	set root=(cd0,gpt3)
+	search --set=root --file /casper/filesystem.squashfs
 
 	if loadfont \$font ; then
 	  set gfxmode=auto
@@ -185,9 +207,19 @@ function CreateLiveCDISO(){
 	#sudo mkisofs -r -V "$IMAGE_NAME" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ../ubuntu-remix.iso .
 	grub-mkrescue -o ../iso/live.iso .
 	cd ..
+	rm -rf image
+	cp iso/live.iso ./
+	rm -rf iso
+}
+
+function Cleanup()
+{
+	rm -rf chroot
 }
 
 function Main(){
+	CreateFolders
+	MountTmpFolders
 	InitBasicSystem
 	CopyBasicConfigFiles
 	BindMountPoints
@@ -195,9 +227,11 @@ function Main(){
 	InstallLiveCDBasicPackages
 	InstallLiveCDPackages
 	RemoveTemporaryFiles
+	UnmountTmpFolders
 	UnbindMountPoints
 	CreateLiveCDStructures
 	CreateLiveCDISO
+	Cleanup
 }
 
 Main
