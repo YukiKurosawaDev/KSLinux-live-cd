@@ -1,6 +1,30 @@
 #!/bin/bash
 
 VERSION=noble
+MIRROR=https://mirrors.aliyun.com/ubuntu/
+
+set -e
+
+function DownloadThirdPartyOrMyPackages(){
+	# Download base_file package from my repo
+	if [ ! -f base-files_99kslinux24.04_amd64.deb ]; then
+		echo "Please download and compile base_file package from my repo:"
+		echo "https://github.com/Yuki-Kurosawa/KSLinux_base-files"
+		echo "Then place it in the same directory as this script."
+		exit 1
+	fi
+
+	# Download code package from microsoft
+	if [ ! -f code_amd64.deb ]; then
+		curl -L -o code_amd64.deb 'https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64'
+	fi
+
+	# Download google-chrome from google
+	if [ ! -f chrome_amd64.deb ];then
+		curl -L -o chrome_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+	fi
+
+}
 
 function CreateFolders(){
 	mkdir chroot
@@ -34,12 +58,12 @@ function CopyBasicConfigFiles(){
 	cp /etc/resolv.conf chroot/etc/resolv.conf
 	cat > chroot/etc/apt/sources.list << EOF
 # UPDATE APT SOURCES
-deb https://mirrors.aliyun.com/ubuntu/ ${VERSION} main restricted universe multiverse
-deb-src https://mirrors.aliyun.com/ubuntu/ ${VERSION} main restricted universe multiverse
-deb https://mirrors.aliyun.com/ubuntu/ ${VERSION}-updates main restricted universe multiverse
-deb-src https://mirrors.aliyun.com/ubuntu/ ${VERSION}-updates main restricted universe multiverse
-deb https://mirrors.aliyun.com/ubuntu/ ${VERSION}-security main restricted universe multiverse
-deb-src https://mirrors.aliyun.com/ubuntu/ ${VERSION}-security main restricted universe multiverse
+deb ${MIRROR} ${VERSION} main restricted universe multiverse
+deb-src ${MIRROR} ${VERSION} main restricted universe multiverse
+deb ${MIRROR} ${VERSION}-updates main restricted universe multiverse
+deb-src ${MIRROR} ${VERSION}-updates main restricted universe multiverse
+deb ${MIRROR} ${VERSION}-security main restricted universe multiverse
+deb-src ${MIRROR} ${VERSION}-security main restricted universe multiverse
 # UPDATE APT SOURCES DONE
 EOF
 
@@ -58,12 +82,12 @@ function SetRootPassword(){
 
 function InstallLiveCDBasicPackages(){
 	chroot chroot apt update
-	chroot chroot apt-get install --yes dbus
+	chroot chroot apt install -y dbus
 	chroot chroot dbus-uuidgen > /var/lib/dbus/machine-id
 
-	chroot chroot apt-get install -y ubuntu-standard casper
-	chroot chroot apt-get install --yes discover laptop-detect os-prober
-	chroot chroot apt-get install --yes linux-image-generic 
+	chroot chroot apt install -y ubuntu-standard casper
+	chroot chroot apt install -y discover laptop-detect os-prober
+	chroot chroot apt install -y linux-image-generic linux-headers-generic
 }
 
 function InstallLiveCDPackages(){
@@ -74,7 +98,7 @@ function InstallLiveCDPackages(){
 	#install network support
 	chroot chroot apt install -y dhcpcd5 net-tools network-manager
 	#install build Env
-	chroot chroot apt install -y build-essential automake autoconf gawk m4 apt-build bison dialog dpkg-dev
+	chroot chroot apt install -y build-essential automake autoconf gawk m4 bison dialog dpkg-dev
 	#install debootstrap
 	chroot chroot apt install -y debootstrap
 	#install livecd
@@ -87,8 +111,23 @@ function InstallLiveCDPackages(){
 	chroot chroot apt install -y openssh-server openssh-client
 	#install vcs
 	chroot chroot apt install -y git subversion mercurial
-	#install apt-mirror
-	chroot chroot apt install -y apt-mirror
+	#install kernel build dependencies
+	chroot chroot apt install flex bison libelf-dev libssl-dev curl build-essential git libxml2-utils cpio -y
+
+	#install third-party and my packages
+	cp -Rv *.deb chroot/
+	cat > chroot/install.sh << EOF
+dpkg -i base-files_99kslinux24.04_amd64.deb
+dpkg -i code_amd64.deb
+dpkg -i chrome_amd64.deb
+EOF
+
+	chmod a+x chroot/install.sh
+
+	chroot chroot /install.sh
+	rm chroot/install.sh
+	rm chroot/*.deb
+
 	#Do Some Manual Configurations
 	chroot chroot
 }
@@ -212,12 +251,12 @@ function CreateLiveCDISO(){
 	rm -rf iso
 }
 
-function Cleanup()
-{
+function Cleanup(){
 	rm -rf chroot
 }
 
 function Main(){
+	DownloadThirdPartyOrMyPackages
 	CreateFolders
 	MountTmpFolders
 	InitBasicSystem
